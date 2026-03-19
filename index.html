@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GS-GC-F1 · Levantamiento Comercial</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:#1c2b1f;--ink-mid:#3d5442;--ink-soft:#6b8870;
+    --leaf:#4a7c59;--leaf-pale:#e6f0e9;--leaf-mist:#f2f7f3;
+    --gold:#b8933a;--gold-pale:#fdf6e8;--border:#c9d9cc;
+    --white:#ffffff;--danger:#c0392b;--success:#27ae60;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--leaf-mist);color:var(--ink);font-size:14px;line-height:1.6;}
+  .wrap{max-width:820px;margin:0 auto;background:var(--white);border-radius:12px;overflow:hidden;box-shadow:0 2px 20px rgba(0,0,0,0.08);}
+
+  .hdr{background:var(--ink);padding:28px 40px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;position:relative;overflow:hidden;}
+  .hdr::before{content:'';position:absolute;width:260px;height:260px;border-radius:50%;border:32px solid var(--ink-mid);right:-60px;top:-100px;opacity:0.5;}
+  .brand{position:relative;z-index:1;}
+  .brand h1{font-family:'Fraunces',serif;font-weight:300;font-size:22px;color:var(--white);letter-spacing:-0.3px;}
+  .brand h1 em{font-style:italic;color:#8fc49a;}
+  .brand p{font-size:10px;font-weight:300;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-top:4px;}
+  .fmeta{position:relative;z-index:1;text-align:right;}
+  .fmeta .code{font-family:'Fraunces',serif;font-weight:300;font-size:12px;color:#8fc49a;letter-spacing:1px;}
+  .fmeta .ver{font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px;}
+
+  .status-bar{padding:10px 40px;font-size:12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
+  .status-bar.checking{background:#fff8e1;color:#7a5e1a;}
+  .status-bar.ready{background:#f0faf4;color:#1a6b35;}
+  .status-bar.error{background:#fdf0f0;color:#7a1a1a;}
+  .dot{width:8px;height:8px;border-radius:50%;background:#ccc;flex-shrink:0;}
+  .dot.ready{background:var(--success);}
+  .dot.error{background:var(--danger);}
+
+  .topbar{background:var(--leaf-pale);border-bottom:1px solid var(--border);padding:14px 40px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+  .tf label{display:block;font-size:10px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px;}
+  .tf input{width:100%;border:none;border-bottom:1.5px solid var(--border);background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);padding:3px 0;outline:none;}
+  .tf input:focus{border-bottom-color:var(--leaf);}
+
+  .tabs{display:flex;border-bottom:1px solid var(--border);overflow-x:auto;}
+  .tab{flex:1;min-width:90px;padding:10px 6px;text-align:center;font-size:10px;font-weight:500;letter-spacing:0.8px;text-transform:uppercase;color:var(--ink-soft);border-bottom:2px solid transparent;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+  .tab.active{color:var(--leaf);border-bottom-color:var(--leaf);background:var(--leaf-mist);}
+  .tab.done{color:var(--ink-soft);border-bottom-color:var(--border);}
+  .tab.done::before{content:'✓ ';color:var(--leaf);}
+
+  .body{padding:36px 40px 48px;}
+  .sec{display:none;animation:fi 0.2s ease;}
+  .sec.on{display:block;}
+  @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+  .stitle{font-family:'Fraunces',serif;font-weight:300;font-size:20px;color:var(--ink);margin-bottom:3px;letter-spacing:-0.3px;}
+  .sdesc{font-size:12px;color:var(--ink-soft);margin-bottom:24px;font-weight:300;}
+
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px;}
+  .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px 20px;}
+  .s2{grid-column:span 2;}
+
+  .f{display:flex;flex-direction:column;gap:5px;}
+  .f label{font-size:10px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:var(--ink-soft);}
+  .req{color:var(--danger);}
+  .f input,.f select,.f textarea{border:1px solid var(--border);border-radius:6px;padding:8px 11px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--white);outline:none;transition:border-color 0.2s,box-shadow 0.2s;resize:vertical;}
+  .f input:focus,.f select:focus,.f textarea:focus{border-color:var(--leaf);box-shadow:0 0 0 3px rgba(74,124,89,0.1);}
+  .f textarea{min-height:72px;}
+
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px;}
+  .chip{padding:6px 13px;border-radius:20px;border:1.5px solid var(--border);font-size:12px;color:var(--ink-soft);cursor:pointer;transition:all 0.15s;user-select:none;}
+  .chip:hover{border-color:var(--leaf);color:var(--leaf);}
+  .chip.sel{background:var(--leaf);border-color:var(--leaf);color:var(--white);font-weight:500;}
+
+  .ccards{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:4px;}
+  .ccards.c2{grid-template-columns:repeat(2,1fr);}
+  .cc{padding:9px 11px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;transition:all 0.15s;user-select:none;display:flex;align-items:center;gap:7px;}
+  .cc:hover{border-color:var(--leaf);background:var(--leaf-mist);}
+  .cc input{display:none;}
+  .ccb{width:15px;height:15px;border:1.5px solid var(--border);border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+  .cc input:checked~.ccb{background:var(--leaf);border-color:var(--leaf);}
+  .cc input:checked~.ccb::after{content:'';width:8px;height:5px;border-left:2px solid white;border-bottom:2px solid white;transform:rotate(-45deg) translate(1px,-1px);display:block;}
+  .cc input:checked~.cct{color:var(--ink);font-weight:500;}
+  .cc.selc{border-color:var(--leaf);background:var(--leaf-pale);}
+  .cct{font-size:12px;color:var(--ink-soft);line-height:1.3;}
+
+  .nota{background:var(--gold-pale);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:10px 13px;font-size:12px;color:#7a5e1a;margin-bottom:18px;line-height:1.5;}
+  .divl{height:1px;background:var(--leaf-pale);margin:22px 0;}
+
+  .budgets{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:4px;}
+  .bopt{padding:9px 7px;border:1.5px solid var(--border);border-radius:7px;text-align:center;cursor:pointer;transition:all 0.15s;user-select:none;}
+  .bopt:hover{border-color:var(--leaf);}
+  .bopt.sel{border-color:var(--leaf);background:var(--leaf-pale);}
+  .bopt .amt{font-size:12px;font-weight:500;color:var(--ink);}
+  .bopt .lbl{font-size:10px;color:var(--ink-soft);margin-top:2px;}
+
+  .urgrow{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px;}
+  .uopt{padding:7px 14px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;color:var(--ink-soft);cursor:pointer;transition:all 0.15s;user-select:none;}
+  .uopt:hover{border-color:var(--leaf);color:var(--leaf);}
+  .uopt.sel{background:var(--leaf);border-color:var(--leaf);color:white;font-weight:500;}
+
+  .nav{display:flex;justify-content:space-between;align-items:center;margin-top:32px;padding-top:20px;border-top:1px solid var(--border);}
+  .btn{padding:10px 24px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all 0.2s;display:flex;align-items:center;gap:8px;}
+  .btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .btn-g{background:transparent;border:1.5px solid var(--border);color:var(--ink-soft);}
+  .btn-g:hover{border-color:var(--leaf);color:var(--leaf);}
+  .btn-p{background:var(--leaf);color:white;}
+  .btn-p:hover:not(:disabled){background:#3d6649;}
+  .sctr{font-size:12px;color:var(--ink-soft);}
+
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .spinner{width:13px;height:13px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;}
+
+  #ok{display:none;text-align:center;padding:48px 32px;}
+  #ok .circ{width:56px;height:56px;background:var(--leaf);border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;}
+  #ok .circ svg{width:28px;height:28px;stroke:white;fill:none;stroke-width:2.5;}
+  #ok h2{font-family:'Fraunces',serif;font-weight:300;font-size:24px;color:var(--ink);margin-bottom:8px;}
+  #ok p{font-size:13px;color:var(--ink-soft);max-width:380px;margin:0 auto;line-height:1.7;}
+  #ok .cards{margin-top:24px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+  #ok .card{padding:10px 16px;border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--ink-soft);text-align:left;min-width:160px;}
+  #ok .card strong{display:block;color:var(--ink);font-size:13px;margin-bottom:2px;}
+
+  .foot{background:var(--ink);padding:10px 40px;display:flex;justify-content:space-between;}
+  .foot span{font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:0.8px;}
+
+  /* TOAST */
+  #toast{position:fixed;bottom:20px;right:20px;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:500;color:white;opacity:0;transform:translateY(10px);transition:all 0.3s;z-index:9999;max-width:320px;line-height:1.4;}
+  #toast.show{opacity:1;transform:translateY(0);}
+  #toast.s{background:var(--success);}
+  #toast.e{background:var(--danger);}
+  #toast.i{background:var(--ink);}
+
+  @media(max-width:600px){
+    .hdr,.topbar,.body,.foot{padding-left:20px;padding-right:20px;}
+    .g2,.g3{grid-template-columns:1fr;}
+    .s2{grid-column:span 1;}
+    .ccards,.ccards.c2,.budgets{grid-template-columns:1fr 1fr;}
+    .hdr{flex-direction:column;align-items:flex-start;}
+    .topbar{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hdr">
+    <div class="brand">
+      <h1>Green Studio <em>RD</em></h1>
+      <p>Diseño biofílico · Paisajismo sostenible</p>
+    </div>
+    <div class="fmeta">
+      <div class="code">GS-GC-F1 · Levantamiento Comercial</div>
+      <div class="ver">Versión 1 · SharePoint</div>
+    </div>
+  </div>
+
+  <div class="status-bar checking" id="sbar">
+    <div class="dot" id="sdot"></div>
+    <span id="stxt">Verificando sesión Microsoft 365...</span>
+  </div>
+
+  <div class="topbar">
+    <div class="tf"><label>Código del proyecto</label><input type="text" id="cod" placeholder="GS-2025-XXX"></div>
+    <div class="tf"><label>Fecha de levantamiento</label><input type="date" id="fecha"></div>
+    <div class="tf"><label>Encargado de ventas</label><input type="text" id="enc" placeholder="Nombre completo"></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="go(0)">Cliente</div>
+    <div class="tab" onclick="go(1)">Proyecto</div>
+    <div class="tab" onclick="go(2)">Requerimientos</div>
+    <div class="tab" onclick="go(3)">Comercial</div>
+    <div class="tab" onclick="go(4)">Cierre</div>
+  </div>
+
+  <div class="body">
+
+    <!-- S1 -->
+    <div class="sec on" id="s0">
+      <div class="stitle">Datos del cliente</div>
+      <div class="sdesc">Información del contacto principal y origen del prospecto</div>
+      <div class="g2" style="margin-bottom:18px;">
+        <div class="f"><label>Nombre del cliente <span class="req">*</span></label><input type="text" id="nomCli" placeholder="Nombre o razón social"></div>
+        <div class="f"><label>Cédula / RNC</label><input type="text" id="ced" placeholder="000-0000000-0"></div>
+        <div class="f"><label>Teléfono principal <span class="req">*</span></label><input type="tel" id="tel" placeholder="(809) 000-0000"></div>
+        <div class="f"><label>WhatsApp</label><input type="tel" id="wa" placeholder="(809) 000-0000"></div>
+        <div class="f s2"><label>Correo electrónico <span class="req">*</span></label><input type="email" id="mail" placeholder="cliente@correo.com"></div>
+      </div>
+      <div class="divl"></div>
+      <div class="f" style="margin-bottom:18px;">
+        <label>¿Cómo nos conoció?</label>
+        <div class="chips" id="origen">
+          <div class="chip" onclick="sc(this,'origen')">Instagram</div>
+          <div class="chip" onclick="sc(this,'origen')">Referido</div>
+          <div class="chip" onclick="sc(this,'origen')">Google</div>
+          <div class="chip" onclick="sc(this,'origen')">Facebook</div>
+          <div class="chip" onclick="sc(this,'origen')">Cliente anterior</div>
+          <div class="chip" onclick="sc(this,'origen')">Evento / feria</div>
+          <div class="chip" onclick="sc(this,'origen')">Otro</div>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="f"><label>Nombre del referido</label><input type="text" id="ref" placeholder="¿Quién los recomendó?"></div>
+        <div class="f"><label>Tipo de cliente</label>
+          <select id="tipoCli">
+            <option value="">Seleccionar…</option>
+            <option>Persona física — residencial</option>
+            <option>Empresa privada</option>
+            <option>Institución / corporativo</option>
+            <option>Constructor / desarrollador</option>
+            <option>Cliente recurrente</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- S2 -->
+    <div class="sec" id="s1">
+      <div class="stitle">Datos del proyecto</div>
+      <div class="sdesc">Ubicación, tipo y alcance del trabajo solicitado</div>
+      <div class="g2" style="margin-bottom:18px;">
+        <div class="f s2"><label>Dirección <span class="req">*</span></label><input type="text" id="dir" placeholder="Calle, número, sector, ciudad"></div>
+        <div class="f"><label>Sector / ciudad</label><input type="text" id="sec2" placeholder="Ej. Piantini, Santo Domingo"></div>
+        <div class="f"><label>Nombre del proyecto</label><input type="text" id="nomProy" placeholder="Ej. Residencia Las Palmas"></div>
+      </div>
+      <div class="f" style="margin-bottom:18px;">
+        <label>Línea de servicio <span class="req">*</span></label>
+        <div class="ccards" id="linCards">
+          <label class="cc"><input type="checkbox" value="Paisajismo exterior" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Paisajismo exterior</span></label>
+          <label class="cc"><input type="checkbox" value="Paisajismo interior / biofílico" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Paisajismo interior / biofílico</span></label>
+          <label class="cc"><input type="checkbox" value="Botánica permanente" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Botánica permanente</span></label>
+          <label class="cc"><input type="checkbox" value="Botánica preservada" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Botánica preservada</span></label>
+          <label class="cc"><input type="checkbox" value="Mantenimiento recurrente" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Mantenimiento recurrente</span></label>
+          <label class="cc"><input type="checkbox" value="Solo diseño" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Solo diseño</span></label>
+        </div>
+      </div>
+      <div class="f" style="margin-bottom:18px;">
+        <label>Alcance</label>
+        <div class="chips" id="alc">
+          <div class="chip" onclick="sc(this,'alc')">Solo diseño</div>
+          <div class="chip" onclick="sc(this,'alc')">Diseño + ejecución</div>
+          <div class="chip" onclick="sc(this,'alc')">Solo ejecución</div>
+          <div class="chip" onclick="sc(this,'alc')">Por definir</div>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="f"><label>Área aproximada (m²)</label><input type="number" id="area" placeholder="0" step="0.5"></div>
+        <div class="f"><label>Tipo de espacio</label>
+          <select id="tipoEsp">
+            <option value="">Seleccionar…</option>
+            <option>Exterior — jardín / patio</option>
+            <option>Exterior — terraza / azotea</option>
+            <option>Interior</option>
+            <option>Semi-interior / lobby</option>
+            <option>Mixto</option>
+          </select>
+        </div>
+        <div class="f s2"><label>Servicios adicionales</label>
+          <div class="ccards c2" id="servCards">
+            <label class="cc"><input type="checkbox" value="Sistema de riego" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Sistema de riego</span></label>
+            <label class="cc"><input type="checkbox" value="Iluminación" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Iluminación</span></label>
+            <label class="cc"><input type="checkbox" value="Ninguno por ahora" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Ninguno por ahora</span></label>
+            <label class="cc"><input type="checkbox" value="Por definir" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Por definir</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S3 -->
+    <div class="sec" id="s2">
+      <div class="stitle">Requerimientos del cliente</div>
+      <div class="sdesc">Necesidades, preferencias estéticas y condiciones del espacio</div>
+      <div class="f" style="margin-bottom:18px;">
+        <label>Estilo de diseño preferido</label>
+        <div class="chips" id="estilo">
+          <div class="chip" onclick="sm(this)">Tropical / exuberante</div>
+          <div class="chip" onclick="sm(this)">Minimalista</div>
+          <div class="chip" onclick="sm(this)">Mediterráneo</div>
+          <div class="chip" onclick="sm(this)">Biofílico / natural</div>
+          <div class="chip" onclick="sm(this)">Moderno / geométrico</div>
+          <div class="chip" onclick="sm(this)">Sin preferencia</div>
+        </div>
+      </div>
+      <div class="f" style="margin-bottom:18px;">
+        <label>Uso esperado del espacio</label>
+        <div class="chips" id="uso">
+          <div class="chip" onclick="sm(this)">Entretenimiento / social</div>
+          <div class="chip" onclick="sm(this)">Descanso / bienestar</div>
+          <div class="chip" onclick="sm(this)">Estético / decorativo</div>
+          <div class="chip" onclick="sm(this)">Trabajo / productividad</div>
+          <div class="chip" onclick="sm(this)">Paso / circulación</div>
+          <div class="chip" onclick="sm(this)">Mixto</div>
+        </div>
+      </div>
+      <div class="g2" style="margin-bottom:18px;">
+        <div class="f s2"><label>Plantas / referencias que le gustan</label><textarea id="pgusta" placeholder="Plantas, proyectos de inspiración, colores..."></textarea></div>
+        <div class="f s2"><label>Plantas / elementos que NO desea</label><textarea id="pnogusta" placeholder="Restricciones, alergias, elementos a evitar..."></textarea></div>
+      </div>
+      <div class="f" style="margin-bottom:18px;">
+        <label>¿Vegetación o infraestructura existente a conservar?</label>
+        <div class="chips" id="exist">
+          <div class="chip" onclick="sc(this,'exist')">No, espacio limpio</div>
+          <div class="chip" onclick="sc(this,'exist')">Sí — plantas a conservar</div>
+          <div class="chip" onclick="sc(this,'exist')">Sí — estructuras a respetar</div>
+          <div class="chip" onclick="sc(this,'exist')">Por evaluar en visita</div>
+        </div>
+      </div>
+      <div class="f"><label>Observaciones del cliente</label><textarea id="obs" placeholder="Cualquier detalle adicional..."></textarea></div>
+    </div>
+
+    <!-- S4 -->
+    <div class="sec" id="s3">
+      <div class="stitle">Condiciones comerciales</div>
+      <div class="sdesc">Presupuesto, plazos y condiciones de pago</div>
+      <div class="f" style="margin-bottom:22px;">
+        <label>Rango de presupuesto estimado (DOP)</label>
+        <div class="budgets" id="budget">
+          <div class="bopt" onclick="sb(this)"><div class="amt">&lt; RD$50K</div><div class="lbl">Pequeño</div></div>
+          <div class="bopt" onclick="sb(this)"><div class="amt">RD$50K–150K</div><div class="lbl">Mediano</div></div>
+          <div class="bopt" onclick="sb(this)"><div class="amt">RD$150K–300K</div><div class="lbl">Estándar</div></div>
+          <div class="bopt" onclick="sb(this)"><div class="amt">RD$300K–500K</div><div class="lbl">Amplio</div></div>
+          <div class="bopt" onclick="sb(this)"><div class="amt">&gt; RD$500K</div><div class="lbl">Grande</div></div>
+          <div class="bopt" onclick="sb(this)"><div class="amt">Por definir</div><div class="lbl">Sin indicar</div></div>
+        </div>
+      </div>
+      <div class="f" style="margin-bottom:22px;">
+        <label>Urgencia / plazo esperado</label>
+        <div class="urgrow" id="urg">
+          <div class="uopt" onclick="su(this)">Urgente (&lt; 1 semana)</div>
+          <div class="uopt" onclick="su(this)">1–2 semanas</div>
+          <div class="uopt" onclick="su(this)">2–4 semanas</div>
+          <div class="uopt" onclick="su(this)">1–2 meses</div>
+          <div class="uopt" onclick="su(this)">Sin urgencia</div>
+        </div>
+      </div>
+      <div class="g2" style="margin-bottom:18px;">
+        <div class="f"><label>Condición de pago</label>
+          <select id="pago">
+            <option value="">Seleccionar…</option>
+            <option>50% anticipo / 50% entrega</option>
+            <option>30% / 40% / 30% por fases</option>
+            <option>Pago total anticipado</option>
+            <option>Por negociar</option>
+          </select>
+        </div>
+        <div class="f"><label>¿Visitó otras empresas?</label>
+          <select id="otras">
+            <option value="">Seleccionar…</option>
+            <option>No, somos su primera opción</option>
+            <option>Sí, está comparando opciones</option>
+            <option>No lo mencionó</option>
+          </select>
+        </div>
+        <div class="f"><label>Fecha de visita técnica</label><input type="date" id="fvisita"></div>
+        <div class="f"><label>Temperatura del prospecto</label>
+          <select id="temp">
+            <option value="">Seleccionar…</option>
+            <option>Caliente — listo para decidir</option>
+            <option>Tibio — evaluando opciones</option>
+            <option>Frío — en etapa exploratoria</option>
+          </select>
+        </div>
+      </div>
+      <div class="f"><label>Notas del encargado de ventas</label><textarea id="notas" placeholder="Observaciones internas, próximos pasos..."></textarea></div>
+    </div>
+
+    <!-- S5 -->
+    <div class="sec" id="s4">
+      <div class="stitle">Confirmación y envío</div>
+      <div class="sdesc">Revisar antes de guardar.</div>
+      <div class="nota">Al guardar, los datos se registran en la lista SharePoint "Oportunidades Comerciales". Si se selecciona notificar a Diseño, Power Automate enviará la alerta al canal de Teams.</div>
+      <div class="g2" style="margin-bottom:22px;">
+        <div class="f"><label>Estado del prospecto</label>
+          <select id="estado">
+            <option>Levantamiento realizado — pendiente propuesta</option>
+            <option>Visita técnica pendiente</option>
+            <option>En negociación</option>
+            <option>Contrato firmado</option>
+            <option>No continuó</option>
+          </select>
+        </div>
+        <div class="f"><label>Próxima acción</label>
+          <select id="accion">
+            <option>Coordinar visita técnica con Diseño</option>
+            <option>Enviar propuesta comercial</option>
+            <option>Esperar respuesta del cliente</option>
+            <option>Seguimiento en X días</option>
+          </select>
+        </div>
+        <div class="f"><label>Fecha de seguimiento</label><input type="date" id="fseg"></div>
+        <div class="f"><label>¿Notificar a Diseño ahora?</label>
+          <select id="notif">
+            <option>Sí — proyecto confirmado, iniciar proceso</option>
+            <option>No — pendiente confirmación del cliente</option>
+          </select>
+        </div>
+      </div>
+      <div class="f"><label>Confirmación del cliente (nombre)</label><input type="text" id="conf" placeholder="Nombre de quien confirmó los datos"></div>
+    </div>
+
+    <div id="ok">
+      <div class="circ"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <h2>Levantamiento guardado</h2>
+      <p>El prospecto fue registrado correctamente en SharePoint. Power Automate procesará la notificación si fue solicitada.</p>
+      <div class="cards">
+        <div class="card"><strong>SharePoint</strong>Ítem creado en Oportunidades Comerciales</div>
+        <div class="card"><strong>Teams — Diseño</strong>Notificación enviada si aplica</div>
+      </div>
+    </div>
+
+    <div class="nav" id="navb">
+      <button class="btn btn-g" id="bbk" onclick="bk()" style="visibility:hidden">Anterior</button>
+      <span class="sctr" id="sctr">Paso 1 de 5</span>
+      <button class="btn btn-p" id="bnx" onclick="nx()">Siguiente →</button>
+    </div>
+
+  </div>
+
+  <div class="foot">
+    <span>GS-GC-F1 · Versión 1</span>
+    <span>Gestión Comercial — Green Studio RD</span>
+    <span>Uso interno</span>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const SP = 'https://intrarhecursos.sharepoint.com/sites/PrototipoGreenStudiodigitalizacin';
+  const LIST = 'Oportunidades Comerciales';
+  let cur=0, total=5, digest='', ok=false;
+
+  async function initAuth(){
+    try{
+      const r=await fetch(`${SP}/_api/contextinfo`,{
+        method:'POST',credentials:'include',
+        headers:{'Accept':'application/json;odata=verbose','Content-Type':'application/json;odata=verbose'}
+      });
+      if(!r.ok) throw new Error();
+      const d=await r.json();
+      digest=d.d.GetContextWebInformation.FormDigestValue;
+      ok=true;
+      document.getElementById('sbar').className='status-bar ready';
+      document.getElementById('sdot').className='dot ready';
+      document.getElementById('stxt').textContent='Sesión Microsoft 365 activa — listo para guardar';
+    }catch(e){
+      document.getElementById('sbar').className='status-bar error';
+      document.getElementById('sdot').className='dot error';
+      document.getElementById('stxt').textContent='Sin sesión activa. Abre este formulario desde dentro de SharePoint.';
+    }
+  }
+
+  function v(id){const e=document.getElementById(id);return e?e.value.trim():'';}
+  function gc(cid){return[...document.querySelectorAll(`#${cid} input:checked`)].map(x=>x.value).join('; ');}
+  function gs(cid){return[...document.querySelectorAll(`#${cid} .chip.sel`)].map(x=>x.textContent).join('; ');}
+
+  function getData(){
+    return{
+      Title:v('cod')||'Sin código',
+      codigoProyecto:v('cod'),
+      fechaLevantamiento:v('fecha'),
+      encargadoVentas:v('enc'),
+      nombreCliente:v('nomCli'),
+      cedulaRNC:v('ced'),
+      telefonoPrincipal:v('tel'),
+      whatsapp:v('wa'),
+      correoElectronico:v('mail'),
+      comoNosConocio:gs('origen'),
+      nombreReferido:v('ref'),
+      tipoCliente:v('tipoCli'),
+      direccion:v('dir'),
+      sectorCiudad:v('sec2'),
+      nombrePropiedad:v('nomProy'),
+      lineaServicio:gc('linCards'),
+      alcanceProyecto:gs('alc'),
+      areaAproximada:parseFloat(v('area'))||0,
+      tipoEspacio:v('tipoEsp'),
+      serviciosAdicionales:gc('servCards'),
+      estiloDiseno:gs('estilo'),
+      usoEspacio:gs('uso'),
+      plantasGusta:v('pgusta'),
+      plantasNoGusta:v('pnogusta'),
+      vegetacionExistente:gs('exist'),
+      obsCliente:v('obs'),
+      presupuesto:document.querySelector('#budget .sel')?.querySelector('.amt')?.textContent||'',
+      urgencia:document.querySelector('#urg .sel')?.textContent||'',
+      condicionPago:v('pago'),
+      visitoOtrasEmpresas:v('otras'),
+      fechaVisitaTecnica:v('fvisita'),
+      temperaturaProspecto:v('temp'),
+      notasVentas:v('notas'),
+      estadoProspecto:v('estado'),
+      proximaAccion:v('accion'),
+      fechaSeguimiento:v('fseg'),
+      notificarDiseno:v('notif'),
+      confirmacionCliente:v('conf'),
+      timestampEnvio:new Date().toISOString()
+    };
+  }
+
+  function validar(d){
+    if(!d.nombreCliente) return 'El nombre del cliente es obligatorio.';
+    if(!d.telefonoPrincipal) return 'El teléfono principal es obligatorio.';
+    if(!d.correoElectronico) return 'El correo electrónico es obligatorio.';
+    if(!d.direccion) return 'La dirección es obligatoria.';
+    return null;
+  }
+
+  async function guardar(d){
+    if(!ok){toast('Sin sesión activa. Abre desde SharePoint.','e',6000);return false;}
+    const body={__metadata:{type:`SP.Data.${LIST.replace(/ /g,'_x0020_')}ListItem`},...d};
+    const r=await fetch(`${SP}/_api/web/lists/getbytitle('${encodeURIComponent(LIST)}')/items`,{
+      method:'POST',credentials:'include',
+      headers:{
+        'Accept':'application/json;odata=verbose',
+        'Content-Type':'application/json;odata=verbose',
+        'X-RequestDigest':digest
+      },
+      body:JSON.stringify(body)
+    });
+    if(!r.ok){
+      const e=await r.json().catch(()=>({}));
+      throw new Error(e?.error?.message?.value||`HTTP ${r.status}`);
+    }
+    return true;
+  }
+
+  function toast(msg,type='i',dur=4000){
+    const t=document.getElementById('toast');
+    t.textContent=msg;t.className=`show ${type}`;
+    setTimeout(()=>{t.className='';},dur);
+  }
+
+  const secs=document.querySelectorAll('.sec');
+  const tabs=document.querySelectorAll('.tab');
+
+  function go(n){
+    secs[cur].classList.remove('on');tabs[cur].classList.remove('active');
+    if(cur<n)tabs[cur].classList.add('done');
+    cur=n;secs[cur].classList.add('on');tabs[cur].classList.add('active');
+    upNav();window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  async function nx(){
+    if(cur<total-1){go(cur+1);return;}
+    const d=getData();
+    const err=validar(d);
+    if(err){toast('⚠ '+err,'e');return;}
+    const btn=document.getElementById('bnx');
+    const sp=document.createElement('span');sp.className='spinner';
+    btn.disabled=true;btn.textContent='Guardando...';btn.appendChild(sp);
+    try{
+      await guardar(d);
+      document.querySelectorAll('.sec').forEach(s=>s.style.display='none');
+      document.getElementById('navb').style.display='none';
+      document.getElementById('ok').style.display='block';
+      tabs[cur].classList.remove('active');tabs[cur].classList.add('done');
+    }catch(e){
+      btn.disabled=false;btn.textContent='Guardar y enviar ✓';
+      toast('✗ Error: '+e.message,'e',8000);
+    }
+  }
+
+  function bk(){if(cur>0)go(cur-1);}
+
+  function upNav(){
+    document.getElementById('bbk').style.visibility=cur===0?'hidden':'visible';
+    document.getElementById('bnx').textContent=cur===total-1?'Guardar y enviar ✓':'Siguiente →';
+    document.getElementById('sctr').textContent=`Paso ${cur+1} de ${total}`;
+  }
+
+  function sc(el,g){document.getElementById(g).querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');}
+  function sm(el){el.classList.toggle('sel');}
+  function tcc(cb){cb.closest('.cc').classList.toggle('selc',cb.checked);}
+  function sb(el){document.getElementById('budget').querySelectorAll('.bopt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');}
+  function su(el){document.getElementById('urg').querySelectorAll('.uopt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');}
+
+  document.querySelectorAll('input[type="date"]').forEach(d=>{if(!d.value)d.value=new Date().toISOString().split('T')[0];});
+  upNav();
+  initAuth();
+</script>
+</body>
+</html>
