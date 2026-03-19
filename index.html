@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GS-GC-F1 · Levantamiento Comercial</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-authentication-library/2.38.0/msal-browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.10.0/lib/msal-browser.min.js"></script>
 <style>
   :root {
     --ink:#1c2b1f;--ink-mid:#3d5442;--ink-soft:#6b8870;
@@ -469,7 +469,7 @@
   async function initMSAL() {
     try {
       msalInstance = new msal.PublicClientApplication(msalConfig);
-      await msalInstance.initialize();
+      if (msalInstance.initialize) await msalInstance.initialize();
 
       const redirect = await msalInstance.handleRedirectPromise();
       if (redirect) {
@@ -497,6 +497,10 @@
 
   async function login() {
     try {
+      if (!msalInstance) {
+        msalInstance = new msal.PublicClientApplication(msalConfig);
+        if (msalInstance.initialize) await msalInstance.initialize();
+      }
       await msalInstance.loginRedirect(loginRequest);
     } catch (e) {
       toast('Error al iniciar sesión: ' + e.message, 'e', 6000);
