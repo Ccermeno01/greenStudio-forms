@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GS-GC-F1 · Levantamiento Comercial</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-authentication-library/2.38.0/msal-browser.min.js"></script>
 <style>
   :root {
     --ink:#1c2b1f;--ink-mid:#3d5442;--ink-soft:#6b8870;
@@ -26,13 +27,25 @@
   .fmeta .code{font-family:'Fraunces',serif;font-weight:300;font-size:12px;color:#8fc49a;letter-spacing:1px;}
   .fmeta .ver{font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px;}
 
-  .status-bar{padding:10px 40px;font-size:12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
-  .status-bar.checking{background:#fff8e1;color:#7a5e1a;}
-  .status-bar.ready{background:#f0faf4;color:#1a6b35;}
-  .status-bar.error{background:#fdf0f0;color:#7a1a1a;}
-  .dot{width:8px;height:8px;border-radius:50%;background:#ccc;flex-shrink:0;}
+  .sbar{padding:10px 40px;font-size:12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);transition:all 0.3s;}
+  .sbar.checking{background:#fff8e1;color:#7a5e1a;}
+  .sbar.ready{background:#f0faf4;color:#1a6b35;}
+  .sbar.error{background:#fdf0f0;color:#7a1a1a;}
+  .dot{width:8px;height:8px;border-radius:50%;background:#ccc;flex-shrink:0;transition:background 0.3s;}
   .dot.ready{background:var(--success);}
   .dot.error{background:var(--danger);}
+  .dot.checking{background:var(--gold);animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+  .login-screen{padding:60px 40px;text-align:center;display:none;}
+  .login-screen.show{display:block;}
+  .login-screen h2{font-family:'Fraunces',serif;font-weight:300;font-size:22px;color:var(--ink);margin-bottom:8px;}
+  .login-screen p{font-size:13px;color:var(--ink-soft);margin-bottom:28px;line-height:1.7;}
+  .btn-login{padding:13px 32px;background:var(--leaf);color:white;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:background 0.2s;}
+  .btn-login:hover{background:#3d6649;}
+
+  .form-area{display:none;}
+  .form-area.show{display:block;}
 
   .topbar{background:var(--leaf-pale);border-bottom:1px solid var(--border);padding:14px 40px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
   .tf label{display:block;font-size:10px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px;}
@@ -42,7 +55,6 @@
   .tabs{display:flex;border-bottom:1px solid var(--border);overflow-x:auto;}
   .tab{flex:1;min-width:90px;padding:10px 6px;text-align:center;font-size:10px;font-weight:500;letter-spacing:0.8px;text-transform:uppercase;color:var(--ink-soft);border-bottom:2px solid transparent;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
   .tab.active{color:var(--leaf);border-bottom-color:var(--leaf);background:var(--leaf-mist);}
-  .tab.done{color:var(--ink-soft);border-bottom-color:var(--border);}
   .tab.done::before{content:'✓ ';color:var(--leaf);}
 
   .body{padding:36px 40px 48px;}
@@ -50,11 +62,10 @@
   .sec.on{display:block;}
   @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
-  .stitle{font-family:'Fraunces',serif;font-weight:300;font-size:20px;color:var(--ink);margin-bottom:3px;letter-spacing:-0.3px;}
+  .stitle{font-family:'Fraunces',serif;font-weight:300;font-size:20px;color:var(--ink);margin-bottom:3px;}
   .sdesc{font-size:12px;color:var(--ink-soft);margin-bottom:24px;font-weight:300;}
 
   .g2{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px;}
-  .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px 20px;}
   .s2{grid-column:span 2;}
 
   .f{display:flex;flex-direction:column;gap:5px;}
@@ -120,7 +131,6 @@
   .foot{background:var(--ink);padding:10px 40px;display:flex;justify-content:space-between;}
   .foot span{font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:0.8px;}
 
-  /* TOAST */
   #toast{position:fixed;bottom:20px;right:20px;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:500;color:white;opacity:0;transform:translateY(10px);transition:all 0.3s;z-index:9999;max-width:320px;line-height:1.4;}
   #toast.show{opacity:1;transform:translateY(0);}
   #toast.s{background:var(--success);}
@@ -128,8 +138,8 @@
   #toast.i{background:var(--ink);}
 
   @media(max-width:600px){
-    .hdr,.topbar,.body,.foot{padding-left:20px;padding-right:20px;}
-    .g2,.g3{grid-template-columns:1fr;}
+    .hdr,.topbar,.body,.foot,.sbar{padding-left:20px;padding-right:20px;}
+    .g2{grid-template-columns:1fr;}
     .s2{grid-column:span 1;}
     .ccards,.ccards.c2,.budgets{grid-template-columns:1fr 1fr;}
     .hdr{flex-direction:column;align-items:flex-start;}
@@ -147,270 +157,281 @@
     </div>
     <div class="fmeta">
       <div class="code">GS-GC-F1 · Levantamiento Comercial</div>
-      <div class="ver">Versión 1 · SharePoint</div>
+      <div class="ver">Versión 1 · Microsoft 365</div>
     </div>
   </div>
 
-  <div class="status-bar checking" id="sbar">
-    <div class="dot" id="sdot"></div>
-    <span id="stxt">Verificando sesión Microsoft 365...</span>
+  <div class="sbar checking" id="sbar">
+    <div class="dot checking" id="sdot"></div>
+    <span id="stxt">Conectando con Microsoft 365...</span>
   </div>
 
-  <div class="topbar">
-    <div class="tf"><label>Código del proyecto</label><input type="text" id="cod" placeholder="GS-2025-XXX"></div>
-    <div class="tf"><label>Fecha de levantamiento</label><input type="date" id="fecha"></div>
-    <div class="tf"><label>Encargado de ventas</label><input type="text" id="enc" placeholder="Nombre completo"></div>
+  <!-- PANTALLA DE LOGIN -->
+  <div class="login-screen" id="loginScreen">
+    <h2>Iniciar sesión</h2>
+    <p>Para guardar el levantamiento en SharePoint necesitas iniciar sesión con tu cuenta de Green Studio en Microsoft 365.</p>
+    <button class="btn-login" onclick="login()">Iniciar sesión con Microsoft 365</button>
   </div>
 
-  <div class="tabs">
-    <div class="tab active" onclick="go(0)">Cliente</div>
-    <div class="tab" onclick="go(1)">Proyecto</div>
-    <div class="tab" onclick="go(2)">Requerimientos</div>
-    <div class="tab" onclick="go(3)">Comercial</div>
-    <div class="tab" onclick="go(4)">Cierre</div>
-  </div>
+  <!-- FORMULARIO -->
+  <div class="form-area" id="formArea">
 
-  <div class="body">
-
-    <!-- S1 -->
-    <div class="sec on" id="s0">
-      <div class="stitle">Datos del cliente</div>
-      <div class="sdesc">Información del contacto principal y origen del prospecto</div>
-      <div class="g2" style="margin-bottom:18px;">
-        <div class="f"><label>Nombre del cliente <span class="req">*</span></label><input type="text" id="nomCli" placeholder="Nombre o razón social"></div>
-        <div class="f"><label>Cédula / RNC</label><input type="text" id="ced" placeholder="000-0000000-0"></div>
-        <div class="f"><label>Teléfono principal <span class="req">*</span></label><input type="tel" id="tel" placeholder="(809) 000-0000"></div>
-        <div class="f"><label>WhatsApp</label><input type="tel" id="wa" placeholder="(809) 000-0000"></div>
-        <div class="f s2"><label>Correo electrónico <span class="req">*</span></label><input type="email" id="mail" placeholder="cliente@correo.com"></div>
-      </div>
-      <div class="divl"></div>
-      <div class="f" style="margin-bottom:18px;">
-        <label>¿Cómo nos conoció?</label>
-        <div class="chips" id="origen">
-          <div class="chip" onclick="sc(this,'origen')">Instagram</div>
-          <div class="chip" onclick="sc(this,'origen')">Referido</div>
-          <div class="chip" onclick="sc(this,'origen')">Google</div>
-          <div class="chip" onclick="sc(this,'origen')">Facebook</div>
-          <div class="chip" onclick="sc(this,'origen')">Cliente anterior</div>
-          <div class="chip" onclick="sc(this,'origen')">Evento / feria</div>
-          <div class="chip" onclick="sc(this,'origen')">Otro</div>
-        </div>
-      </div>
-      <div class="g2">
-        <div class="f"><label>Nombre del referido</label><input type="text" id="ref" placeholder="¿Quién los recomendó?"></div>
-        <div class="f"><label>Tipo de cliente</label>
-          <select id="tipoCli">
-            <option value="">Seleccionar…</option>
-            <option>Persona física — residencial</option>
-            <option>Empresa privada</option>
-            <option>Institución / corporativo</option>
-            <option>Constructor / desarrollador</option>
-            <option>Cliente recurrente</option>
-          </select>
-        </div>
-      </div>
+    <div class="topbar">
+      <div class="tf"><label>Código del proyecto</label><input type="text" id="cod" placeholder="GS-2025-XXX"></div>
+      <div class="tf"><label>Fecha de levantamiento</label><input type="date" id="fecha"></div>
+      <div class="tf"><label>Encargado de ventas</label><input type="text" id="enc" placeholder="Nombre completo"></div>
     </div>
 
-    <!-- S2 -->
-    <div class="sec" id="s1">
-      <div class="stitle">Datos del proyecto</div>
-      <div class="sdesc">Ubicación, tipo y alcance del trabajo solicitado</div>
-      <div class="g2" style="margin-bottom:18px;">
-        <div class="f s2"><label>Dirección <span class="req">*</span></label><input type="text" id="dir" placeholder="Calle, número, sector, ciudad"></div>
-        <div class="f"><label>Sector / ciudad</label><input type="text" id="sec2" placeholder="Ej. Piantini, Santo Domingo"></div>
-        <div class="f"><label>Nombre del proyecto</label><input type="text" id="nomProy" placeholder="Ej. Residencia Las Palmas"></div>
-      </div>
-      <div class="f" style="margin-bottom:18px;">
-        <label>Línea de servicio <span class="req">*</span></label>
-        <div class="ccards" id="linCards">
-          <label class="cc"><input type="checkbox" value="Paisajismo exterior" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Paisajismo exterior</span></label>
-          <label class="cc"><input type="checkbox" value="Paisajismo interior / biofílico" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Paisajismo interior / biofílico</span></label>
-          <label class="cc"><input type="checkbox" value="Botánica permanente" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Botánica permanente</span></label>
-          <label class="cc"><input type="checkbox" value="Botánica preservada" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Botánica preservada</span></label>
-          <label class="cc"><input type="checkbox" value="Mantenimiento recurrente" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Mantenimiento recurrente</span></label>
-          <label class="cc"><input type="checkbox" value="Solo diseño" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Solo diseño</span></label>
+    <div class="tabs">
+      <div class="tab active" onclick="go(0)">Cliente</div>
+      <div class="tab" onclick="go(1)">Proyecto</div>
+      <div class="tab" onclick="go(2)">Requerimientos</div>
+      <div class="tab" onclick="go(3)">Comercial</div>
+      <div class="tab" onclick="go(4)">Cierre</div>
+    </div>
+
+    <div class="body">
+
+      <!-- S1 -->
+      <div class="sec on" id="s0">
+        <div class="stitle">Datos del cliente</div>
+        <div class="sdesc">Información del contacto principal y origen del prospecto</div>
+        <div class="g2" style="margin-bottom:18px;">
+          <div class="f"><label>Nombre del cliente <span class="req">*</span></label><input type="text" id="nomCli" placeholder="Nombre o razón social"></div>
+          <div class="f"><label>Cédula / RNC</label><input type="text" id="ced" placeholder="000-0000000-0"></div>
+          <div class="f"><label>Teléfono principal <span class="req">*</span></label><input type="tel" id="tel" placeholder="(809) 000-0000"></div>
+          <div class="f"><label>WhatsApp</label><input type="tel" id="wa" placeholder="(809) 000-0000"></div>
+          <div class="f s2"><label>Correo electrónico <span class="req">*</span></label><input type="email" id="mail" placeholder="cliente@correo.com"></div>
         </div>
-      </div>
-      <div class="f" style="margin-bottom:18px;">
-        <label>Alcance</label>
-        <div class="chips" id="alc">
-          <div class="chip" onclick="sc(this,'alc')">Solo diseño</div>
-          <div class="chip" onclick="sc(this,'alc')">Diseño + ejecución</div>
-          <div class="chip" onclick="sc(this,'alc')">Solo ejecución</div>
-          <div class="chip" onclick="sc(this,'alc')">Por definir</div>
+        <div class="divl"></div>
+        <div class="f" style="margin-bottom:18px;">
+          <label>¿Cómo nos conoció?</label>
+          <div class="chips" id="origen">
+            <div class="chip" onclick="sc(this,'origen')">Instagram</div>
+            <div class="chip" onclick="sc(this,'origen')">Referido</div>
+            <div class="chip" onclick="sc(this,'origen')">Google</div>
+            <div class="chip" onclick="sc(this,'origen')">Facebook</div>
+            <div class="chip" onclick="sc(this,'origen')">Cliente anterior</div>
+            <div class="chip" onclick="sc(this,'origen')">Evento / feria</div>
+            <div class="chip" onclick="sc(this,'origen')">Otro</div>
+          </div>
         </div>
-      </div>
-      <div class="g2">
-        <div class="f"><label>Área aproximada (m²)</label><input type="number" id="area" placeholder="0" step="0.5"></div>
-        <div class="f"><label>Tipo de espacio</label>
-          <select id="tipoEsp">
-            <option value="">Seleccionar…</option>
-            <option>Exterior — jardín / patio</option>
-            <option>Exterior — terraza / azotea</option>
-            <option>Interior</option>
-            <option>Semi-interior / lobby</option>
-            <option>Mixto</option>
-          </select>
-        </div>
-        <div class="f s2"><label>Servicios adicionales</label>
-          <div class="ccards c2" id="servCards">
-            <label class="cc"><input type="checkbox" value="Sistema de riego" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Sistema de riego</span></label>
-            <label class="cc"><input type="checkbox" value="Iluminación" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Iluminación</span></label>
-            <label class="cc"><input type="checkbox" value="Ninguno por ahora" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Ninguno por ahora</span></label>
-            <label class="cc"><input type="checkbox" value="Por definir" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Por definir</span></label>
+        <div class="g2">
+          <div class="f"><label>Nombre del referido</label><input type="text" id="ref" placeholder="¿Quién los recomendó?"></div>
+          <div class="f"><label>Tipo de cliente</label>
+            <select id="tipoCli">
+              <option value="">Seleccionar…</option>
+              <option>Persona física — residencial</option>
+              <option>Empresa privada</option>
+              <option>Institución / corporativo</option>
+              <option>Constructor / desarrollador</option>
+              <option>Cliente recurrente</option>
+            </select>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- S3 -->
-    <div class="sec" id="s2">
-      <div class="stitle">Requerimientos del cliente</div>
-      <div class="sdesc">Necesidades, preferencias estéticas y condiciones del espacio</div>
-      <div class="f" style="margin-bottom:18px;">
-        <label>Estilo de diseño preferido</label>
-        <div class="chips" id="estilo">
-          <div class="chip" onclick="sm(this)">Tropical / exuberante</div>
-          <div class="chip" onclick="sm(this)">Minimalista</div>
-          <div class="chip" onclick="sm(this)">Mediterráneo</div>
-          <div class="chip" onclick="sm(this)">Biofílico / natural</div>
-          <div class="chip" onclick="sm(this)">Moderno / geométrico</div>
-          <div class="chip" onclick="sm(this)">Sin preferencia</div>
+      <!-- S2 -->
+      <div class="sec" id="s1">
+        <div class="stitle">Datos del proyecto</div>
+        <div class="sdesc">Ubicación, tipo y alcance del trabajo solicitado</div>
+        <div class="g2" style="margin-bottom:18px;">
+          <div class="f s2"><label>Dirección <span class="req">*</span></label><input type="text" id="dir" placeholder="Calle, número, sector, ciudad"></div>
+          <div class="f"><label>Sector / ciudad</label><input type="text" id="sec2" placeholder="Ej. Piantini, Santo Domingo"></div>
+          <div class="f"><label>Nombre del proyecto</label><input type="text" id="nomProy" placeholder="Ej. Residencia Las Palmas"></div>
+        </div>
+        <div class="f" style="margin-bottom:18px;">
+          <label>Línea de servicio <span class="req">*</span></label>
+          <div class="ccards" id="linCards">
+            <label class="cc"><input type="checkbox" value="Paisajismo exterior" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Paisajismo exterior</span></label>
+            <label class="cc"><input type="checkbox" value="Paisajismo interior / biofílico" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Paisajismo interior / biofílico</span></label>
+            <label class="cc"><input type="checkbox" value="Botánica permanente" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Botánica permanente</span></label>
+            <label class="cc"><input type="checkbox" value="Botánica preservada" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Botánica preservada</span></label>
+            <label class="cc"><input type="checkbox" value="Mantenimiento recurrente" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Mantenimiento recurrente</span></label>
+            <label class="cc"><input type="checkbox" value="Solo diseño" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Solo diseño</span></label>
+          </div>
+        </div>
+        <div class="f" style="margin-bottom:18px;">
+          <label>Alcance</label>
+          <div class="chips" id="alc">
+            <div class="chip" onclick="sc(this,'alc')">Solo diseño</div>
+            <div class="chip" onclick="sc(this,'alc')">Diseño + ejecución</div>
+            <div class="chip" onclick="sc(this,'alc')">Solo ejecución</div>
+            <div class="chip" onclick="sc(this,'alc')">Por definir</div>
+          </div>
+        </div>
+        <div class="g2">
+          <div class="f"><label>Área aproximada (m²)</label><input type="number" id="area" placeholder="0" step="0.5"></div>
+          <div class="f"><label>Tipo de espacio</label>
+            <select id="tipoEsp">
+              <option value="">Seleccionar…</option>
+              <option>Exterior — jardín / patio</option>
+              <option>Exterior — terraza / azotea</option>
+              <option>Interior</option>
+              <option>Semi-interior / lobby</option>
+              <option>Mixto</option>
+            </select>
+          </div>
+          <div class="f s2"><label>Servicios adicionales</label>
+            <div class="ccards c2" id="servCards">
+              <label class="cc"><input type="checkbox" value="Sistema de riego" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Sistema de riego</span></label>
+              <label class="cc"><input type="checkbox" value="Iluminación" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Iluminación</span></label>
+              <label class="cc"><input type="checkbox" value="Ninguno por ahora" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Ninguno por ahora</span></label>
+              <label class="cc"><input type="checkbox" value="Por definir" onchange="tcc(this)"><span class="ccb"></span><span class="cct">Por definir</span></label>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="f" style="margin-bottom:18px;">
-        <label>Uso esperado del espacio</label>
-        <div class="chips" id="uso">
-          <div class="chip" onclick="sm(this)">Entretenimiento / social</div>
-          <div class="chip" onclick="sm(this)">Descanso / bienestar</div>
-          <div class="chip" onclick="sm(this)">Estético / decorativo</div>
-          <div class="chip" onclick="sm(this)">Trabajo / productividad</div>
-          <div class="chip" onclick="sm(this)">Paso / circulación</div>
-          <div class="chip" onclick="sm(this)">Mixto</div>
-        </div>
-      </div>
-      <div class="g2" style="margin-bottom:18px;">
-        <div class="f s2"><label>Plantas / referencias que le gustan</label><textarea id="pgusta" placeholder="Plantas, proyectos de inspiración, colores..."></textarea></div>
-        <div class="f s2"><label>Plantas / elementos que NO desea</label><textarea id="pnogusta" placeholder="Restricciones, alergias, elementos a evitar..."></textarea></div>
-      </div>
-      <div class="f" style="margin-bottom:18px;">
-        <label>¿Vegetación o infraestructura existente a conservar?</label>
-        <div class="chips" id="exist">
-          <div class="chip" onclick="sc(this,'exist')">No, espacio limpio</div>
-          <div class="chip" onclick="sc(this,'exist')">Sí — plantas a conservar</div>
-          <div class="chip" onclick="sc(this,'exist')">Sí — estructuras a respetar</div>
-          <div class="chip" onclick="sc(this,'exist')">Por evaluar en visita</div>
-        </div>
-      </div>
-      <div class="f"><label>Observaciones del cliente</label><textarea id="obs" placeholder="Cualquier detalle adicional..."></textarea></div>
-    </div>
 
-    <!-- S4 -->
-    <div class="sec" id="s3">
-      <div class="stitle">Condiciones comerciales</div>
-      <div class="sdesc">Presupuesto, plazos y condiciones de pago</div>
-      <div class="f" style="margin-bottom:22px;">
-        <label>Rango de presupuesto estimado (DOP)</label>
-        <div class="budgets" id="budget">
-          <div class="bopt" onclick="sb(this)"><div class="amt">&lt; RD$50K</div><div class="lbl">Pequeño</div></div>
-          <div class="bopt" onclick="sb(this)"><div class="amt">RD$50K–150K</div><div class="lbl">Mediano</div></div>
-          <div class="bopt" onclick="sb(this)"><div class="amt">RD$150K–300K</div><div class="lbl">Estándar</div></div>
-          <div class="bopt" onclick="sb(this)"><div class="amt">RD$300K–500K</div><div class="lbl">Amplio</div></div>
-          <div class="bopt" onclick="sb(this)"><div class="amt">&gt; RD$500K</div><div class="lbl">Grande</div></div>
-          <div class="bopt" onclick="sb(this)"><div class="amt">Por definir</div><div class="lbl">Sin indicar</div></div>
+      <!-- S3 -->
+      <div class="sec" id="s2">
+        <div class="stitle">Requerimientos del cliente</div>
+        <div class="sdesc">Necesidades, preferencias estéticas y condiciones del espacio</div>
+        <div class="f" style="margin-bottom:18px;">
+          <label>Estilo de diseño preferido</label>
+          <div class="chips" id="estilo">
+            <div class="chip" onclick="sm(this)">Tropical / exuberante</div>
+            <div class="chip" onclick="sm(this)">Minimalista</div>
+            <div class="chip" onclick="sm(this)">Mediterráneo</div>
+            <div class="chip" onclick="sm(this)">Biofílico / natural</div>
+            <div class="chip" onclick="sm(this)">Moderno / geométrico</div>
+            <div class="chip" onclick="sm(this)">Sin preferencia</div>
+          </div>
         </div>
+        <div class="f" style="margin-bottom:18px;">
+          <label>Uso esperado del espacio</label>
+          <div class="chips" id="uso">
+            <div class="chip" onclick="sm(this)">Entretenimiento / social</div>
+            <div class="chip" onclick="sm(this)">Descanso / bienestar</div>
+            <div class="chip" onclick="sm(this)">Estético / decorativo</div>
+            <div class="chip" onclick="sm(this)">Trabajo / productividad</div>
+            <div class="chip" onclick="sm(this)">Paso / circulación</div>
+            <div class="chip" onclick="sm(this)">Mixto</div>
+          </div>
+        </div>
+        <div class="g2" style="margin-bottom:18px;">
+          <div class="f s2"><label>Plantas / referencias que le gustan</label><textarea id="pgusta" placeholder="Plantas, proyectos de inspiración, colores..."></textarea></div>
+          <div class="f s2"><label>Plantas / elementos que NO desea</label><textarea id="pnogusta" placeholder="Restricciones, alergias, elementos a evitar..."></textarea></div>
+        </div>
+        <div class="f" style="margin-bottom:18px;">
+          <label>¿Vegetación o infraestructura existente a conservar?</label>
+          <div class="chips" id="exist">
+            <div class="chip" onclick="sc(this,'exist')">No, espacio limpio</div>
+            <div class="chip" onclick="sc(this,'exist')">Sí — plantas a conservar</div>
+            <div class="chip" onclick="sc(this,'exist')">Sí — estructuras a respetar</div>
+            <div class="chip" onclick="sc(this,'exist')">Por evaluar en visita</div>
+          </div>
+        </div>
+        <div class="f"><label>Observaciones del cliente</label><textarea id="obs" placeholder="Cualquier detalle adicional..."></textarea></div>
       </div>
-      <div class="f" style="margin-bottom:22px;">
-        <label>Urgencia / plazo esperado</label>
-        <div class="urgrow" id="urg">
-          <div class="uopt" onclick="su(this)">Urgente (&lt; 1 semana)</div>
-          <div class="uopt" onclick="su(this)">1–2 semanas</div>
-          <div class="uopt" onclick="su(this)">2–4 semanas</div>
-          <div class="uopt" onclick="su(this)">1–2 meses</div>
-          <div class="uopt" onclick="su(this)">Sin urgencia</div>
-        </div>
-      </div>
-      <div class="g2" style="margin-bottom:18px;">
-        <div class="f"><label>Condición de pago</label>
-          <select id="pago">
-            <option value="">Seleccionar…</option>
-            <option>50% anticipo / 50% entrega</option>
-            <option>30% / 40% / 30% por fases</option>
-            <option>Pago total anticipado</option>
-            <option>Por negociar</option>
-          </select>
-        </div>
-        <div class="f"><label>¿Visitó otras empresas?</label>
-          <select id="otras">
-            <option value="">Seleccionar…</option>
-            <option>No, somos su primera opción</option>
-            <option>Sí, está comparando opciones</option>
-            <option>No lo mencionó</option>
-          </select>
-        </div>
-        <div class="f"><label>Fecha de visita técnica</label><input type="date" id="fvisita"></div>
-        <div class="f"><label>Temperatura del prospecto</label>
-          <select id="temp">
-            <option value="">Seleccionar…</option>
-            <option>Caliente — listo para decidir</option>
-            <option>Tibio — evaluando opciones</option>
-            <option>Frío — en etapa exploratoria</option>
-          </select>
-        </div>
-      </div>
-      <div class="f"><label>Notas del encargado de ventas</label><textarea id="notas" placeholder="Observaciones internas, próximos pasos..."></textarea></div>
-    </div>
 
-    <!-- S5 -->
-    <div class="sec" id="s4">
-      <div class="stitle">Confirmación y envío</div>
-      <div class="sdesc">Revisar antes de guardar.</div>
-      <div class="nota">Al guardar, los datos se registran en la lista SharePoint "Oportunidades Comerciales". Si se selecciona notificar a Diseño, Power Automate enviará la alerta al canal de Teams.</div>
-      <div class="g2" style="margin-bottom:22px;">
-        <div class="f"><label>Estado del prospecto</label>
-          <select id="estado">
-            <option>Levantamiento realizado — pendiente propuesta</option>
-            <option>Visita técnica pendiente</option>
-            <option>En negociación</option>
-            <option>Contrato firmado</option>
-            <option>No continuó</option>
-          </select>
+      <!-- S4 -->
+      <div class="sec" id="s3">
+        <div class="stitle">Condiciones comerciales</div>
+        <div class="sdesc">Presupuesto, plazos y condiciones de pago</div>
+        <div class="f" style="margin-bottom:22px;">
+          <label>Rango de presupuesto estimado (DOP)</label>
+          <div class="budgets" id="budget">
+            <div class="bopt" onclick="sb(this)"><div class="amt">&lt; RD$50K</div><div class="lbl">Pequeño</div></div>
+            <div class="bopt" onclick="sb(this)"><div class="amt">RD$50K–150K</div><div class="lbl">Mediano</div></div>
+            <div class="bopt" onclick="sb(this)"><div class="amt">RD$150K–300K</div><div class="lbl">Estándar</div></div>
+            <div class="bopt" onclick="sb(this)"><div class="amt">RD$300K–500K</div><div class="lbl">Amplio</div></div>
+            <div class="bopt" onclick="sb(this)"><div class="amt">&gt; RD$500K</div><div class="lbl">Grande</div></div>
+            <div class="bopt" onclick="sb(this)"><div class="amt">Por definir</div><div class="lbl">Sin indicar</div></div>
+          </div>
         </div>
-        <div class="f"><label>Próxima acción</label>
-          <select id="accion">
-            <option>Coordinar visita técnica con Diseño</option>
-            <option>Enviar propuesta comercial</option>
-            <option>Esperar respuesta del cliente</option>
-            <option>Seguimiento en X días</option>
-          </select>
+        <div class="f" style="margin-bottom:22px;">
+          <label>Urgencia / plazo esperado</label>
+          <div class="urgrow" id="urg">
+            <div class="uopt" onclick="su(this)">Urgente (&lt; 1 semana)</div>
+            <div class="uopt" onclick="su(this)">1–2 semanas</div>
+            <div class="uopt" onclick="su(this)">2–4 semanas</div>
+            <div class="uopt" onclick="su(this)">1–2 meses</div>
+            <div class="uopt" onclick="su(this)">Sin urgencia</div>
+          </div>
         </div>
-        <div class="f"><label>Fecha de seguimiento</label><input type="date" id="fseg"></div>
-        <div class="f"><label>¿Notificar a Diseño ahora?</label>
-          <select id="notif">
-            <option>Sí — proyecto confirmado, iniciar proceso</option>
-            <option>No — pendiente confirmación del cliente</option>
-          </select>
+        <div class="g2" style="margin-bottom:18px;">
+          <div class="f"><label>Condición de pago</label>
+            <select id="pago">
+              <option value="">Seleccionar…</option>
+              <option>50% anticipo / 50% entrega</option>
+              <option>30% / 40% / 30% por fases</option>
+              <option>Pago total anticipado</option>
+              <option>Por negociar</option>
+            </select>
+          </div>
+          <div class="f"><label>¿Visitó otras empresas?</label>
+            <select id="otras">
+              <option value="">Seleccionar…</option>
+              <option>No, somos su primera opción</option>
+              <option>Sí, está comparando opciones</option>
+              <option>No lo mencionó</option>
+            </select>
+          </div>
+          <div class="f"><label>Fecha de visita técnica</label><input type="date" id="fvisita"></div>
+          <div class="f"><label>Temperatura del prospecto</label>
+            <select id="temp">
+              <option value="">Seleccionar…</option>
+              <option>Caliente — listo para decidir</option>
+              <option>Tibio — evaluando opciones</option>
+              <option>Frío — en etapa exploratoria</option>
+            </select>
+          </div>
+        </div>
+        <div class="f"><label>Notas del encargado de ventas</label><textarea id="notas" placeholder="Observaciones internas, próximos pasos..."></textarea></div>
+      </div>
+
+      <!-- S5 -->
+      <div class="sec" id="s4">
+        <div class="stitle">Confirmación y envío</div>
+        <div class="sdesc">Revisar antes de guardar.</div>
+        <div class="nota">Al guardar, los datos se registran en la lista SharePoint "Oportunidades Comerciales". Si se selecciona notificar a Diseño, Power Automate enviará la alerta al canal de Teams.</div>
+        <div class="g2" style="margin-bottom:22px;">
+          <div class="f"><label>Estado del prospecto</label>
+            <select id="estado">
+              <option>Levantamiento realizado — pendiente propuesta</option>
+              <option>Visita técnica pendiente</option>
+              <option>En negociación</option>
+              <option>Contrato firmado</option>
+              <option>No continuó</option>
+            </select>
+          </div>
+          <div class="f"><label>Próxima acción</label>
+            <select id="accion">
+              <option>Coordinar visita técnica con Diseño</option>
+              <option>Enviar propuesta comercial</option>
+              <option>Esperar respuesta del cliente</option>
+              <option>Seguimiento en X días</option>
+            </select>
+          </div>
+          <div class="f"><label>Fecha de seguimiento</label><input type="date" id="fseg"></div>
+          <div class="f"><label>¿Notificar a Diseño ahora?</label>
+            <select id="notif">
+              <option>Sí — proyecto confirmado, iniciar proceso</option>
+              <option>No — pendiente confirmación del cliente</option>
+            </select>
+          </div>
+        </div>
+        <div class="f"><label>Confirmación del cliente (nombre)</label><input type="text" id="conf" placeholder="Nombre de quien confirmó los datos"></div>
+      </div>
+
+      <div id="ok">
+        <div class="circ"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <h2>Levantamiento guardado</h2>
+        <p>El prospecto fue registrado correctamente en SharePoint.</p>
+        <div class="cards">
+          <div class="card"><strong>SharePoint</strong>Ítem creado en Oportunidades Comerciales</div>
+          <div class="card"><strong>Teams — Diseño</strong>Notificación enviada si aplica</div>
         </div>
       </div>
-      <div class="f"><label>Confirmación del cliente (nombre)</label><input type="text" id="conf" placeholder="Nombre de quien confirmó los datos"></div>
-    </div>
 
-    <div id="ok">
-      <div class="circ"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
-      <h2>Levantamiento guardado</h2>
-      <p>El prospecto fue registrado correctamente en SharePoint. Power Automate procesará la notificación si fue solicitada.</p>
-      <div class="cards">
-        <div class="card"><strong>SharePoint</strong>Ítem creado en Oportunidades Comerciales</div>
-        <div class="card"><strong>Teams — Diseño</strong>Notificación enviada si aplica</div>
+      <div class="nav" id="navb">
+        <button class="btn btn-g" id="bbk" onclick="bk()" style="visibility:hidden">Anterior</button>
+        <span class="sctr" id="sctr">Paso 1 de 5</span>
+        <button class="btn btn-p" id="bnx" onclick="nx()">Siguiente →</button>
       </div>
-    </div>
 
-    <div class="nav" id="navb">
-      <button class="btn btn-g" id="bbk" onclick="bk()" style="visibility:hidden">Anterior</button>
-      <span class="sctr" id="sctr">Paso 1 de 5</span>
-      <button class="btn btn-p" id="bnx" onclick="nx()">Siguiente →</button>
     </div>
-
   </div>
 
   <div class="foot">
@@ -423,30 +444,107 @@
 <div id="toast"></div>
 
 <script>
-  const SP = 'https://intrarhecursos.sharepoint.com/sites/PrototipoGreenStudiodigitalizacin';
-  const LIST = 'Oportunidades Comerciales';
-  let cur=0, total=5, digest='', ok=false;
+  // ─── CONFIGURACIÓN ────────────────────────────────────────────────────────
+  // IMPORTANTE: Reemplazar CLIENT_ID con el ID de tu app registrada en Azure AD
+  const CLIENT_ID = '65290064-102e-4912-aad9-dcb85c5a5e26';
+  const TENANT_ID = 'intrarhecursos.onmicrosoft.com';
+  const SP_SITE   = 'https://intrarhecursos.sharepoint.com/sites/PrototipoGreenStudiodigitalizacin';
+  const SP_LIST   = 'Oportunidades Comerciales';
 
-  async function initAuth(){
-    try{
-      const r=await fetch(`${SP}/_api/contextinfo`,{
-        method:'POST',credentials:'include',
-        headers:{'Accept':'application/json;odata=verbose','Content-Type':'application/json;odata=verbose'}
-      });
-      if(!r.ok) throw new Error();
-      const d=await r.json();
-      digest=d.d.GetContextWebInformation.FormDigestValue;
-      ok=true;
-      document.getElementById('sbar').className='status-bar ready';
-      document.getElementById('sdot').className='dot ready';
-      document.getElementById('stxt').textContent='Sesión Microsoft 365 activa — listo para guardar';
-    }catch(e){
-      document.getElementById('sbar').className='status-bar error';
-      document.getElementById('sdot').className='dot error';
-      document.getElementById('stxt').textContent='Sin sesión activa. Abre este formulario desde dentro de SharePoint.';
+  const msalConfig = {
+    auth: {
+      clientId: CLIENT_ID,
+      authority: `https://login.microsoftonline.com/${TENANT_ID}`,
+      redirectUri: window.location.href.split('?')[0]
+    },
+    cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false }
+  };
+
+  const loginRequest = {
+    scopes: ['https://intrarhecursos.sharepoint.com/AllSites.Write']
+  };
+
+  let msalInstance, accessToken;
+
+  async function initMSAL() {
+    try {
+      msalInstance = new msal.PublicClientApplication(msalConfig);
+      await msalInstance.initialize();
+
+      const redirect = await msalInstance.handleRedirectPromise();
+      if (redirect) {
+        accessToken = redirect.accessToken;
+        showForm(redirect.account);
+        return;
+      }
+
+      const accounts = msalInstance.getAllAccounts();
+      if (accounts.length > 0) {
+        try {
+          const silent = await msalInstance.acquireTokenSilent({ ...loginRequest, account: accounts[0] });
+          accessToken = silent.accessToken;
+          showForm(accounts[0]);
+        } catch {
+          showLogin();
+        }
+      } else {
+        showLogin();
+      }
+    } catch (e) {
+      showLogin();
     }
   }
 
+  async function login() {
+    try {
+      await msalInstance.loginRedirect(loginRequest);
+    } catch (e) {
+      toast('Error al iniciar sesión: ' + e.message, 'e', 6000);
+    }
+  }
+
+  function showLogin() {
+    document.getElementById('sbar').className = 'sbar error';
+    document.getElementById('sdot').className = 'dot error';
+    document.getElementById('stxt').textContent = 'Sesión requerida — inicia sesión para continuar';
+    document.getElementById('loginScreen').classList.add('show');
+    document.getElementById('formArea').classList.remove('show');
+  }
+
+  function showForm(account) {
+    document.getElementById('sbar').className = 'sbar ready';
+    document.getElementById('sdot').className = 'dot ready';
+    document.getElementById('stxt').textContent = `Sesión activa: ${account.username} — listo para guardar`;
+    document.getElementById('loginScreen').classList.remove('show');
+    document.getElementById('formArea').classList.add('show');
+  }
+
+  // ─── GUARDAR EN SHAREPOINT ────────────────────────────────────────────────
+  async function guardar(d) {
+    const body = {
+      __metadata: { type: `SP.Data.${SP_LIST.replace(/ /g,'_x0020_')}ListItem` },
+      ...d
+    };
+    const r = await fetch(
+      `${SP_SITE}/_api/web/lists/getbytitle('${encodeURIComponent(SP_LIST)}')/items`,
+      {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json;odata=verbose',
+          'Content-Type': 'application/json;odata=verbose',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify(body)
+      }
+    );
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e?.error?.message?.value || `HTTP ${r.status}`);
+    }
+    return true;
+  }
+
+  // ─── DATOS ────────────────────────────────────────────────────────────────
   function v(id){const e=document.getElementById(id);return e?e.value.trim():'';}
   function gc(cid){return[...document.querySelectorAll(`#${cid} input:checked`)].map(x=>x.value).join('; ');}
   function gs(cid){return[...document.querySelectorAll(`#${cid} .chip.sel`)].map(x=>x.textContent).join('; ');}
@@ -454,44 +552,21 @@
   function getData(){
     return{
       Title:v('cod')||'Sin código',
-      codigoProyecto:v('cod'),
-      fechaLevantamiento:v('fecha'),
-      encargadoVentas:v('enc'),
-      nombreCliente:v('nomCli'),
-      cedulaRNC:v('ced'),
-      telefonoPrincipal:v('tel'),
-      whatsapp:v('wa'),
-      correoElectronico:v('mail'),
-      comoNosConocio:gs('origen'),
-      nombreReferido:v('ref'),
-      tipoCliente:v('tipoCli'),
-      direccion:v('dir'),
-      sectorCiudad:v('sec2'),
-      nombrePropiedad:v('nomProy'),
-      lineaServicio:gc('linCards'),
-      alcanceProyecto:gs('alc'),
-      areaAproximada:parseFloat(v('area'))||0,
-      tipoEspacio:v('tipoEsp'),
-      serviciosAdicionales:gc('servCards'),
-      estiloDiseno:gs('estilo'),
-      usoEspacio:gs('uso'),
-      plantasGusta:v('pgusta'),
-      plantasNoGusta:v('pnogusta'),
-      vegetacionExistente:gs('exist'),
-      obsCliente:v('obs'),
+      codigoProyecto:v('cod'),fechaLevantamiento:v('fecha'),encargadoVentas:v('enc'),
+      nombreCliente:v('nomCli'),cedulaRNC:v('ced'),telefonoPrincipal:v('tel'),
+      whatsapp:v('wa'),correoElectronico:v('mail'),comoNosConocio:gs('origen'),
+      nombreReferido:v('ref'),tipoCliente:v('tipoCli'),direccion:v('dir'),
+      sectorCiudad:v('sec2'),nombrePropiedad:v('nomProy'),lineaServicio:gc('linCards'),
+      alcanceProyecto:gs('alc'),areaAproximada:parseFloat(v('area'))||0,
+      tipoEspacio:v('tipoEsp'),serviciosAdicionales:gc('servCards'),
+      estiloDiseno:gs('estilo'),usoEspacio:gs('uso'),plantasGusta:v('pgusta'),
+      plantasNoGusta:v('pnogusta'),vegetacionExistente:gs('exist'),obsCliente:v('obs'),
       presupuesto:document.querySelector('#budget .sel')?.querySelector('.amt')?.textContent||'',
       urgencia:document.querySelector('#urg .sel')?.textContent||'',
-      condicionPago:v('pago'),
-      visitoOtrasEmpresas:v('otras'),
-      fechaVisitaTecnica:v('fvisita'),
-      temperaturaProspecto:v('temp'),
-      notasVentas:v('notas'),
-      estadoProspecto:v('estado'),
-      proximaAccion:v('accion'),
-      fechaSeguimiento:v('fseg'),
-      notificarDiseno:v('notif'),
-      confirmacionCliente:v('conf'),
-      timestampEnvio:new Date().toISOString()
+      condicionPago:v('pago'),visitoOtrasEmpresas:v('otras'),fechaVisitaTecnica:v('fvisita'),
+      temperaturaProspecto:v('temp'),notasVentas:v('notas'),estadoProspecto:v('estado'),
+      proximaAccion:v('accion'),fechaSeguimiento:v('fseg'),notificarDiseno:v('notif'),
+      confirmacionCliente:v('conf'),timestampEnvio:new Date().toISOString()
     };
   }
 
@@ -503,31 +578,8 @@
     return null;
   }
 
-  async function guardar(d){
-    if(!ok){toast('Sin sesión activa. Abre desde SharePoint.','e',6000);return false;}
-    const body={__metadata:{type:`SP.Data.${LIST.replace(/ /g,'_x0020_')}ListItem`},...d};
-    const r=await fetch(`${SP}/_api/web/lists/getbytitle('${encodeURIComponent(LIST)}')/items`,{
-      method:'POST',credentials:'include',
-      headers:{
-        'Accept':'application/json;odata=verbose',
-        'Content-Type':'application/json;odata=verbose',
-        'X-RequestDigest':digest
-      },
-      body:JSON.stringify(body)
-    });
-    if(!r.ok){
-      const e=await r.json().catch(()=>({}));
-      throw new Error(e?.error?.message?.value||`HTTP ${r.status}`);
-    }
-    return true;
-  }
-
-  function toast(msg,type='i',dur=4000){
-    const t=document.getElementById('toast');
-    t.textContent=msg;t.className=`show ${type}`;
-    setTimeout(()=>{t.className='';},dur);
-  }
-
+  // ─── NAVEGACIÓN ───────────────────────────────────────────────────────────
+  let cur=0; const total=5;
   const secs=document.querySelectorAll('.sec');
   const tabs=document.querySelectorAll('.tab');
 
@@ -540,8 +592,7 @@
 
   async function nx(){
     if(cur<total-1){go(cur+1);return;}
-    const d=getData();
-    const err=validar(d);
+    const d=getData();const err=validar(d);
     if(err){toast('⚠ '+err,'e');return;}
     const btn=document.getElementById('bnx');
     const sp=document.createElement('span');sp.className='spinner';
@@ -559,7 +610,6 @@
   }
 
   function bk(){if(cur>0)go(cur-1);}
-
   function upNav(){
     document.getElementById('bbk').style.visibility=cur===0?'hidden':'visible';
     document.getElementById('bnx').textContent=cur===total-1?'Guardar y enviar ✓':'Siguiente →';
@@ -572,9 +622,15 @@
   function sb(el){document.getElementById('budget').querySelectorAll('.bopt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');}
   function su(el){document.getElementById('urg').querySelectorAll('.uopt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');}
 
+  function toast(msg,type='i',dur=4000){
+    const t=document.getElementById('toast');
+    t.textContent=msg;t.className=`show ${type}`;
+    setTimeout(()=>{t.className='';},dur);
+  }
+
   document.querySelectorAll('input[type="date"]').forEach(d=>{if(!d.value)d.value=new Date().toISOString().split('T')[0];});
   upNav();
-  initAuth();
+  initMSAL();
 </script>
 </body>
 </html>
