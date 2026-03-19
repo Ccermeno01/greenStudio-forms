@@ -449,7 +449,7 @@
   const CLIENT_ID = '65290064-102e-4912-aad9-dcb85c5a5e26';
   const TENANT_ID = 'intrarhecursos.onmicrosoft.com';
   const SP_SITE   = 'https://intrarhecursos.sharepoint.com/sites/PrototipoGreenStudiodigitalizacin';
-  const SP_LIST   = 'GSGCF1 Levantamiento Comercial';
+  const SP_LIST   = 'GS-GC-F1 Levantamiento Comercial';
 
   const msalConfig = {
     auth: {
@@ -526,7 +526,7 @@
   // ─── GUARDAR EN SHAREPOINT ────────────────────────────────────────────────
   async function guardar(d) {
     const body = {
-      __metadata: { type: `SP.Data.${SP_LIST.replace(/ /g,'_x0020_')}ListItem` },
+      __metadata: { type: `SP.Data.GSGCF1_x0020_Levantamiento_x0020_ComercialListItem` },
       ...d
     };
     const r = await fetch(
